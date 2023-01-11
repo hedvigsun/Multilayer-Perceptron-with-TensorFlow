@@ -9,18 +9,22 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 import random
 import os
-from tqdm import tqdm,tqdm_notebook,_tqdm_notebook
-tqdm.pandas(tqdm_notebook)
+from tqdm import tqdm, tqdm_notebook # _tqdm_notebook
+tqdm.pandas()
 #Suppressing warnings and infos of TensorFlow
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 SEED = 51 #Fixing seed
 synthetic = False# whether to use synthetic data
 
+# We're working in Tensorflow v1 mode, i.e. no eager execution
+tf.compat.v1.disable_eager_execution()
+
+
 def seed_everything(seed=SEED):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
 
 seed_everything(seed=SEED)
 
@@ -86,21 +90,21 @@ if synthetic:
 steps = len(train_X) # How many training data
 
 #Resetting the graph
-tf.reset_default_graph()
+tf.compat.v1.reset_default_graph()
 
 #Defining Placeholders
-X = tf.placeholder("float", [None, n_input])
-Y = tf.placeholder("float", [None, n_classes])
-hold_prob1 = tf.placeholder(tf.float32)
-hold_prob2 = tf.placeholder(tf.float32)
+X = tf.compat.v1.placeholder("float", [None, n_input])
+Y = tf.compat.v1.placeholder("float", [None, n_classes])
+hold_prob1 = tf.compat.v1.placeholder(tf.float32)
+hold_prob2 = tf.compat.v1.placeholder(tf.float32)
 
 # Store layers weight & bias
 weights = {
-    'h1': tf.Variable(tf.truncated_normal([n_input, n_hidden_1],\
+    'h1': tf.Variable(tf.compat.v1.truncated_normal([n_input, n_hidden_1],\
         mean = 0.0,stddev=0.2)),
-    'h2': tf.Variable(tf.truncated_normal([n_hidden_1, n_hidden_2],\
+    'h2': tf.Variable(tf.compat.v1.truncated_normal([n_hidden_1, n_hidden_2],\
         mean = 0.0,stddev = 0.2)),
-    'out': tf.Variable(tf.truncated_normal([n_hidden_2, n_classes],\
+    'out': tf.Variable(tf.compat.v1.truncated_normal([n_hidden_2, n_classes],\
         mean = 0.0,stddev = 0.2))
 }
 biases = {
@@ -118,15 +122,15 @@ def multilayer_perceptron(x):
     #Applying RELU nonlinearity
     layer1_RELU = tf.nn.relu(layer_1)
     #Applying Dropout
-    layer1_dropout = tf.nn.dropout(layer1_RELU,keep_prob=hold_prob1)
+    #layer1_dropout = tf.nn.dropout(layer1_RELU,keep_prob=hold_prob1)
     # Second hidden layer
-    layer_2 = tf.add(tf.matmul(layer1_dropout, weights['h2']), biases['b2'])
+    layer_2 = tf.add(tf.matmul(layer1_RELU, weights['h2']), biases['b2'])
     #Applying TANH nonlinearity
     layer2_TANH = tf.nn.tanh(layer_2)
     #Applying Dropout
-    layer2_dropout = tf.nn.dropout(layer2_TANH,keep_prob=hold_prob2)
+    #layer2_dropout = tf.nn.dropout(layer2_TANH,keep_prob=hold_prob2)
     # Output layer
-    out_layer = tf.matmul(layer2_dropout, weights['out']) + biases['out']
+    out_layer = tf.matmul(layer2_TANH, weights['out']) + biases['out']
     return out_layer
 
 # Building model
